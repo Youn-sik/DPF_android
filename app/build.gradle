@@ -7,8 +7,8 @@ android {
 
     defaultConfig {
         applicationId "com.gachon.digital_photo_frame"
-        minSdk 27
-        targetSdk 32
+        minSdk 28
+        targetSdk 29
         versionCode 1
         versionName "1.0"
 

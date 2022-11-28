@@ -1,13 +1,22 @@
 package com.gachon.digital_photo_frame;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.res.AssetManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.OpenableColumns;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
@@ -17,7 +26,27 @@ import android.widget.VideoView;
 
 import com.bumptech.glide.Glide;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Timer;
+
+import android.util.Log;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -54,10 +83,6 @@ public class MainActivity extends AppCompatActivity {
         defaultGifURL = "android.resource://" + PACKAGE_NAME + "/" + R.raw.gif_loop;
         defaultImageURL = "android.resource://" + PACKAGE_NAME + "/" + R.raw.company_image;
 
-        Uri defaultVideoURI = Uri.parse(defaultVideoURL);
-        Uri defaultGifURI = Uri.parse(defaultGifURL);
-        Uri defaultImageURI = Uri.parse(defaultImageURL);
-
         // 각 뷰 매핑
         videoView = findViewById(R.id.videoView);
         gifView = (ImageView)findViewById(R.id.gifView);
@@ -68,17 +93,55 @@ public class MainActivity extends AppCompatActivity {
         gifView.setVisibility(View.INVISIBLE);
         imageView.setVisibility(View.INVISIBLE);
 
+        /*
         // 한 개씩 테스트 해본다
-        // gifView.setVisibility(View.VI11SIBLE);
-        // GifPlay();
-        // imageView.setVisibility(View.VISIBLE);
-        // ImagePlay();
-        videoView.setVisibility(View.VISIBLE);
-        VideoPlay();
+         gifView.setVisibility(View.VISIBLE);
+         gifURL = "/storage/emulated/0/uploads/gif_loop.gif";
+         GifPlay(gifURL);
+         imageView.setVisibility(View.VISIBLE);
+         imageURL = "/storage/emulated/0/uploads/image.jpg";
+         ImagePlay(imageURL);
+         videoView.setVisibility(View.VISIBLE);
+         videoURL = "/storage/emulated/0/uploads/20221115/company_video.mp4";
+         VideoPlay(videoURL);
+         */
+
+        try {
+            String jsonData = jsonRead();
+            JSONObject jsonObject = new JSONObject(jsonData);
+            String scheduleType = jsonObject.getString("schedule_type");
+            JSONArray scheduleList = jsonObject.getJSONArray("schedule_list");
+
+            ArrayList<HashMap> schedule = new ArrayList<>();
+
+            for (int i=0; i<scheduleList.length(); i++) {
+                JSONObject scheduleObject = scheduleList.getJSONObject(i);
+                String filePath = scheduleObject.getString("file_path");
+                String fileExt = scheduleObject.getString("file_ext");
+                String fileNameWithExt = scheduleObject.getString("file_name_with_ext");
+                String fileFullPath = filePath + fileNameWithExt;
+
+                HashMap<String, String> contentInfo = new HashMap<String, String>();
+                contentInfo.put("fileExt", fileExt);
+                contentInfo.put("fileFullPath", fileFullPath);
+
+                schedule.add(contentInfo);
+            }
+
+            if (scheduleType.equals("repeat")) {
+                startScheduleRepeat(schedule);
+            } else if (scheduleType == "day") {
+                // startScheduleDay(schedule);
+            } else {
+                startScheduleDefault();
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void VideoPlay() {
-        videoURL = "/storage/emulated/0/uploads/sample.mp4";
+    public void VideoPlay(String videoURL) {
         Uri videoURI = Uri.parse(videoURL);
 
         mediaController = new MediaController(this);
@@ -94,14 +157,12 @@ public class MainActivity extends AppCompatActivity {
         videoView.setOnCompletionListener(mComplete);
     }
 
-    public void ImagePlay() {
-        imageURL = "/storage/emulated/0/uploads/image.jpg";
+    public void ImagePlay(String imageURL) {
         Uri imageURI = Uri.parse(imageURL);
         imageView.setImageURI(imageURI);
     }
 
-    public void GifPlay() {
-        gifURL = "/storage/emulated/0/uploads/gif_loop.gif";
+    public void GifPlay(String gifURL) {
         Uri gifURI = Uri.parse(gifURL);
         Glide.with(this)
             .load(new File(gifURI.getPath()))
@@ -191,4 +252,84 @@ public class MainActivity extends AppCompatActivity {
             videoView.start();
         }
     };
+
+    public boolean isExternalStorageReadable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) || Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    public String jsonRead() {
+        String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/uploads/json";
+        StringBuilder sb = new StringBuilder();
+        try {
+            FileInputStream fis = new FileInputStream(new File(filePath, "repeat.json"));
+            InputStreamReader isr = new InputStreamReader(fis);
+            BufferedReader bufferedReader = new BufferedReader(isr);
+            String line;
+            while ((line = bufferedReader.readLine()) != null) {
+                sb.append(line);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();;
+        }
+        return sb.toString();
+    }
+
+    public void startScheduleRepeat(ArrayList schedule) {
+        Log.d("schedule", schedule.toString());
+//        while(true) {
+            for(int i=0; i<schedule.size(); i++) {
+                HashMap<String, String> scheduleObj = (HashMap<String, String>) schedule.get(i);
+                playSchedule(scheduleObj, 10000);
+            }
+//        }
+
+        // gifView.setVisibility(View.VISIBLE);
+        // gifURL = "/storage/emulated/0/uploads/gif_loop.gif";
+        // GifPlay(gifURL);
+        // imageView.setVisibility(View.VISIBLE);
+        // imageURL = "/storage/emulated/0/uploads/image.jpg";
+        // ImagePlay(imageURL);
+        // videoView.setVisibility(View.VISIBLE);
+        // videoURL = "/storage/emulated/0/uploads/20221115/company_video.mp4";
+        // VideoPlay(videoURL);
+    }
+
+    public void startScheduleDefault() {
+        VideoPlay(defaultVideoURL);
+        videoView.setVisibility(View.VISIBLE);
+    }
+
+    public void setInvisibleViews() {
+        videoView.setVisibility(View.INVISIBLE);
+        gifView.setVisibility(View.INVISIBLE);
+        imageView.setVisibility(View.INVISIBLE);
+    }
+
+    public void playSchedule(HashMap<String, String> scheduleObj, long ms) {
+
+        String fileExt = scheduleObj.get("fileExt").toString();
+        String fileFullPath = scheduleObj.get("fileFullPath").toString();
+
+        Log.d("HHHHHHHHHH", scheduleObj.toString());
+
+        setInvisibleViews();
+
+        if(fileExt.equals(".mp4")) {
+
+            videoView.setVisibility(View.VISIBLE);
+            VideoPlay(fileFullPath);
+        } else if(fileExt.equals(".gif")) {
+
+            gifView.setVisibility(View.VISIBLE);
+            GifPlay(fileFullPath);
+        } else { // 사진
+
+            imageView.setVisibility(View.VISIBLE);
+            ImagePlay(fileFullPath);
+        }
+    }
 }
