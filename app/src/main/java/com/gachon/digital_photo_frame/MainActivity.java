@@ -15,6 +15,8 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.util.Log;
 import android.view.View;
@@ -45,6 +47,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Timer;
+import java.util.TimerTask;
 
 import android.util.Log;
 
@@ -105,7 +108,11 @@ public class MainActivity extends AppCompatActivity {
          videoURL = "/storage/emulated/0/uploads/20221115/company_video.mp4";
          VideoPlay(videoURL);
          */
+    }
 
+    @Override
+    public void onResume() {
+        super.onResume();
         try {
             String jsonData = jsonRead();
             JSONObject jsonObject = new JSONObject(jsonData);
@@ -114,7 +121,7 @@ public class MainActivity extends AppCompatActivity {
 
             ArrayList<HashMap> schedule = new ArrayList<>();
 
-            for (int i=0; i<scheduleList.length(); i++) {
+            for (int i = 0; i < scheduleList.length(); i++) {
                 JSONObject scheduleObject = scheduleList.getJSONObject(i);
                 String filePath = scheduleObject.getString("file_path");
                 String fileExt = scheduleObject.getString("file_ext");
@@ -279,23 +286,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startScheduleRepeat(ArrayList schedule) {
+/*
+        try {
         Log.d("schedule", schedule.toString());
-//        while(true) {
+        while(true) {
             for(int i=0; i<schedule.size(); i++) {
                 HashMap<String, String> scheduleObj = (HashMap<String, String>) schedule.get(i);
-                playSchedule(scheduleObj, 10000);
+                playSchedule(scheduleObj);
+                    Thread.sleep(10000);
             }
-//        }
+        }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+ */
 
-        // gifView.setVisibility(View.VISIBLE);
-        // gifURL = "/storage/emulated/0/uploads/gif_loop.gif";
-        // GifPlay(gifURL);
-        // imageView.setVisibility(View.VISIBLE);
-        // imageURL = "/storage/emulated/0/uploads/image.jpg";
-        // ImagePlay(imageURL);
-        // videoView.setVisibility(View.VISIBLE);
-        // videoURL = "/storage/emulated/0/uploads/20221115/company_video.mp4";
-        // VideoPlay(videoURL);
+        for(int i=0; i<schedule.size(); i++) {
+            final int Inti = i;
+            HashMap<String, String> scheduleObj = (HashMap<String, String>) schedule.get(Inti);
+            playSchedule(scheduleObj);
+        }
     }
 
     public void startScheduleDefault() {
@@ -309,27 +319,31 @@ public class MainActivity extends AppCompatActivity {
         imageView.setVisibility(View.INVISIBLE);
     }
 
-    public void playSchedule(HashMap<String, String> scheduleObj, long ms) {
+    public void playSchedule(HashMap<String, String> scheduleObj) {
+
+        Log.d("HHHHHHHHHH", scheduleObj.toString());
 
         String fileExt = scheduleObj.get("fileExt").toString();
         String fileFullPath = scheduleObj.get("fileFullPath").toString();
 
-        Log.d("HHHHHHHHHH", scheduleObj.toString());
-
         setInvisibleViews();
 
         if(fileExt.equals(".mp4")) {
+            Log.d("MMMMMMMMMMMMMMMMMM", "MMMMMMMMMMMMMMMMMM");
 
             videoView.setVisibility(View.VISIBLE);
             VideoPlay(fileFullPath);
         } else if(fileExt.equals(".gif")) {
+            Log.d("GGGGGGGGGGGGGG", "GGGGGGGGGGGGGG");
 
             gifView.setVisibility(View.VISIBLE);
             GifPlay(fileFullPath);
         } else { // 사진
+            Log.d("IIIIIIIIIIIIIIIII", "IIIIIIIIIIIIIIII");
 
             imageView.setVisibility(View.VISIBLE);
             ImagePlay(fileFullPath);
         }
+
     }
 }
