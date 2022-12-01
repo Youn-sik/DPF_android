@@ -16,7 +16,13 @@
         android:theme="@style/Theme.Digital_Photo_Frame">
         <activity
             android:name=".MainActivity2"
-            android:exported="false" />
+            android:exported="true"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+            <intent-filter>
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".MainActivity"
             android:exported="true"

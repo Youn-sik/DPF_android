@@ -307,7 +307,7 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 startActivity(mainActivity2Intent);
             }
-        }, 60000);
+        }, 10000);
 
     }
 
