@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.AssetManager;
 import android.database.Cursor;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -70,6 +71,8 @@ public class MainActivity extends AppCompatActivity {
     private String imageURL;
     private String gifURL;
 
+    private int index = -1;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) { // 앱이 첫 실행됬을 때 이곳을 수행한다. (이외에도 다른 라이프 사이클 메서드가 존재.)
         super.onCreate(savedInstanceState);
@@ -111,8 +114,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
+    public void onStart() {
+        super.onStart();
         try {
             String jsonData = jsonRead();
             JSONObject jsonObject = new JSONObject(jsonData);
@@ -286,26 +289,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startScheduleRepeat(ArrayList schedule) {
-/*
-        try {
-        Log.d("schedule", schedule.toString());
-        while(true) {
-            for(int i=0; i<schedule.size(); i++) {
-                HashMap<String, String> scheduleObj = (HashMap<String, String>) schedule.get(i);
-                playSchedule(scheduleObj);
-                    Thread.sleep(10000);
-            }
+        if (schedule.size() - 1 == index) {
+            index = -1;
         }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
- */
 
-        for(int i=0; i<schedule.size(); i++) {
-            final int Inti = i;
-            HashMap<String, String> scheduleObj = (HashMap<String, String>) schedule.get(Inti);
-            playSchedule(scheduleObj);
-        }
+        HashMap<String, String> scheduleObj;
+        scheduleObj = (HashMap<String, String>) schedule.get(++index);
+        // 재생 시간은 여기서 가져와야한다.
+        playSchedule(scheduleObj);
+
+        scheduleObj = (HashMap<String, String>) schedule.get(++index);
+        Intent mainActivity2Intent = new Intent(this, MainActivity2.class);
+        mainActivity2Intent.putExtra("scheduleObj", scheduleObj);
+
+        new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                startActivity(mainActivity2Intent);
+            }
+        }, 60000);
+
     }
 
     public void startScheduleDefault() {
