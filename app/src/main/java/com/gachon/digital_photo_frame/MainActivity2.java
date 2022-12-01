@@ -177,8 +177,7 @@ public class MainActivity2 extends AppCompatActivity {
     }
 
     public void playSchedule(HashMap<String, String> scheduleObj) {
-
-        Log.d("HHHHHHHHHH", scheduleObj.toString());
+        Log.d("scheduleObj", scheduleObj.toString());
 
         String fileExt = scheduleObj.get("fileExt").toString();
         String fileFullPath = scheduleObj.get("fileFullPath").toString();
@@ -186,18 +185,12 @@ public class MainActivity2 extends AppCompatActivity {
         setInvisibleViews();
 
         if (fileExt.equals(".mp4")) {
-            Log.d("MMMMMMMMMMMMMMMMMM", "MMMMMMMMMMMMMMMMMM");
-
             videoView.setVisibility(View.VISIBLE);
             VideoPlay(fileFullPath);
         } else if (fileExt.equals(".gif")) {
-            Log.d("GGGGGGGGGGGGGG", "GGGGGGGGGGGGGG");
-
             gifView.setVisibility(View.VISIBLE);
             GifPlay(fileFullPath);
         } else { // 사진
-            Log.d("IIIIIIIIIIIIIIIII", "IIIIIIIIIIIIIIII");
-
             imageView.setVisibility(View.VISIBLE);
             ImagePlay(fileFullPath);
         }
@@ -209,14 +202,15 @@ public class MainActivity2 extends AppCompatActivity {
 
         Intent intent = getIntent();
         HashMap<String, String> scheduleObj = (HashMap<String, String>) intent.getSerializableExtra("scheduleObj");
+        int ms = (int) intent.getSerializableExtra("ms");
+
         playSchedule(scheduleObj);
-        Log.d("HHHHHHHHHH", scheduleObj.toString());
 
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 finish();
             }
-        }, 10000);
+        }, ms);
     }
 }

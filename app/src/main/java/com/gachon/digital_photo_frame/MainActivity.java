@@ -19,6 +19,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
+import android.util.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -44,6 +45,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
+import java.io.UnsupportedEncodingException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.AlgorithmParameterSpec;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Map;
@@ -51,6 +57,13 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import android.util.Log;
+
+import javax.crypto.BadPaddingException;
+import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
+import javax.crypto.NoSuchPaddingException;
+import javax.crypto.spec.IvParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -126,14 +139,24 @@ public class MainActivity extends AppCompatActivity {
 
             for (int i = 0; i < scheduleList.length(); i++) {
                 JSONObject scheduleObject = scheduleList.getJSONObject(i);
+
                 String filePath = scheduleObject.getString("file_path");
                 String fileExt = scheduleObject.getString("file_ext");
                 String fileNameWithExt = scheduleObject.getString("file_name_with_ext");
+                String duration = scheduleObject.getString("duration");
                 String fileFullPath = filePath + fileNameWithExt;
+
+                String[] durationArr = duration.split(":");
+                int sec = 0;
+                sec += Integer.parseInt(durationArr[0]) * 3600;
+                sec += Integer.parseInt(durationArr[1]) * 60;
+                sec += Integer.parseInt(durationArr[2]);
+                String ms = Integer.toString(sec * 1000);
 
                 HashMap<String, String> contentInfo = new HashMap<String, String>();
                 contentInfo.put("fileExt", fileExt);
                 contentInfo.put("fileFullPath", fileFullPath);
+                contentInfo.put("ms", ms);
 
                 schedule.add(contentInfo);
             }
@@ -289,25 +312,35 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void startScheduleRepeat(ArrayList schedule) {
+        Log.d("schedule", schedule.toString());
+
         if (schedule.size() - 1 == index) {
             index = -1;
         }
 
         HashMap<String, String> scheduleObj;
         scheduleObj = (HashMap<String, String>) schedule.get(++index);
-        // 재생 시간은 여기서 가져와야한다.
+        int ms = Integer.parseInt(scheduleObj.get("ms").toString());
+
         playSchedule(scheduleObj);
 
+        if (schedule.size() - 1 == index) {
+            index = -1;
+        }
+
         scheduleObj = (HashMap<String, String>) schedule.get(++index);
+        ms = Integer.parseInt(scheduleObj.get("ms").toString());
+
         Intent mainActivity2Intent = new Intent(this, MainActivity2.class);
         mainActivity2Intent.putExtra("scheduleObj", scheduleObj);
+        mainActivity2Intent.putExtra("ms", ms);
 
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 startActivity(mainActivity2Intent);
             }
-        }, 10000);
+        }, ms);
 
     }
 
@@ -323,8 +356,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void playSchedule(HashMap<String, String> scheduleObj) {
-
-        Log.d("HHHHHHHHHH", scheduleObj.toString());
+        Log.d("scheduleObj", scheduleObj.toString());
 
         String fileExt = scheduleObj.get("fileExt").toString();
         String fileFullPath = scheduleObj.get("fileFullPath").toString();
@@ -332,18 +364,12 @@ public class MainActivity extends AppCompatActivity {
         setInvisibleViews();
 
         if(fileExt.equals(".mp4")) {
-            Log.d("MMMMMMMMMMMMMMMMMM", "MMMMMMMMMMMMMMMMMM");
-
             videoView.setVisibility(View.VISIBLE);
             VideoPlay(fileFullPath);
         } else if(fileExt.equals(".gif")) {
-            Log.d("GGGGGGGGGGGGGG", "GGGGGGGGGGGGGG");
-
             gifView.setVisibility(View.VISIBLE);
             GifPlay(fileFullPath);
         } else { // 사진
-            Log.d("IIIIIIIIIIIIIIIII", "IIIIIIIIIIIIIIII");
-
             imageView.setVisibility(View.VISIBLE);
             ImagePlay(fileFullPath);
         }
