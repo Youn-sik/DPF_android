@@ -19,7 +19,7 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
-import android.util.Base64;
+import org.apache.commons.codec.binary.Base64;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -34,6 +34,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.DataInputStream;
 import java.io.File;
@@ -45,11 +46,19 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 
+import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.spec.AlgorithmParameterSpec;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Map;
@@ -64,6 +73,8 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -295,7 +306,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public String jsonRead() {
-        String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/uploads/json";
+        String filePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/uploads";
         StringBuilder sb = new StringBuilder();
         try {
             FileInputStream fis = new FileInputStream(new File(filePath, "repeat.json"));
@@ -311,7 +322,133 @@ public class MainActivity extends AppCompatActivity {
         return sb.toString();
     }
 
+    ///
+    public static String AESDecode(String str, String key)	throws Exception {
+        byte[] ivBytes = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+        byte[] textBytes = Base64.decodeBase64(str);
+
+        AlgorithmParameterSpec ivSpec = new IvParameterSpec(ivBytes);
+        SecretKeySpec newKey = new SecretKeySpec(key.getBytes("UTF-8"), "AES");
+
+        Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.DECRYPT_MODE, newKey, ivSpec);
+
+        String result = new String(cipher.doFinal(textBytes), "UTF-8");
+        return result;
+    }
+    public static final String encodeSHA256Base64(String strPW) {
+        String passACL = null;
+        MessageDigest md = null;
+
+        try {
+            md = MessageDigest.getInstance("SHA-256");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        md.update(strPW.getBytes());
+        byte[] raw = md.digest();
+        byte[] encodedBytes = Base64.encodeBase64(raw);
+        passACL = new String(encodedBytes);
+
+        return passACL;
+    }
+    /*
+    public HashMap<String, Object> callApi(JSONObject json, String callUrl) {
+        StringBuilder responseBody = null;
+        HashMap<String, Object> result = new HashMap<>();
+
+        int connectTimeout = 1000;
+        int readTimeout = 1000;
+
+        URL url = null;
+        HttpURLConnection connection = null;
+
+        try {
+            SSLContext sslCtx = SSLContext.getInstance("TLSv1.2");
+            sslCtx.init(null, null, new SecureRandom());
+
+            url = new URL(callUrl);
+            System.out.println(" url " + url.toString());
+            connection = (HttpsURLConnection)url.openConnection();
+            connection.setSSLSocketFactory(sslCtx.getSocketFactory());
+
+            connection.addRequestProperty("Content-Type", "application/json");
+            connection.addRequestProperty("Accept", "application/json");
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            connection.setConnectTimeout(connectTimeout);
+            connection.setReadTimeout(readTimeout);
+
+            OutputStreamWriter osw = new OutputStreamWriter(new BufferedOutputStream(connection.getOutputStream()) , "utf-8" );
+            char[] bytes = json.toString().toCharArray();
+            osw.write(bytes,0,bytes.length);
+            osw.flush();
+            osw.close();
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(connection.getInputStream(), "utf-8"));
+            String line = null;
+            responseBody =  new StringBuilder();
+            while ((line = br.readLine()) != null) {
+                System.out.println(" response " +  line);
+                responseBody.append(line);
+            }
+            br.close();
+
+            // 결제결과
+            result = new ObjectMapper().readValue(responseBody.toString(), HashMap.class);
+
+        } catch (MalformedURLException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return result;
+    }
+     */
+    ///
+
     public void startScheduleRepeat(ArrayList schedule) {
+        ///
+        try {
+            String url = "https://tapproval.smartropay.co.kr/payment/approval/ssbdel.do";
+            String Mid = "t_2211281m";
+            String MerchantKey = "0/4GFsSd7ERVRGX9WHOzJ96GyeMTwvIaKSWUCKmN3fDklNRGw3CualCFoMPZaS99YiFGOuwtzTkrLo4bR4V+Ow==";
+            String SspMallId = "t_2211281p";
+            String BillTokenKey = "BT2212054444412872041332175537";
+
+            JSONObject body = new JSONObject();
+            JSONObject paramData = new JSONObject();
+
+            String VerifyValue = encodeSHA256Base64(Mid + SspMallId + BillTokenKey);
+
+            paramData.put("ServiceType", "CD");
+            paramData.put("Mid", Mid);
+            paramData.put("BillTokenKey", BillTokenKey);
+            paramData.put("SspMallId", SspMallId);
+            paramData.put("MallUserId", "");
+            paramData.put("VerifyValue", VerifyValue);
+
+            try {
+                body.put("EncData", AES256Cipher.AES_Encode(paramData.toString(), MerchantKey.substring(0,32)));
+                body.put("Mid", Mid);
+
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+
+//            HashMap<String, Object> result = callApi(body, url);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        ///
+
         Log.d("schedule", schedule.toString());
 
         if (schedule.size() - 1 == index) {
